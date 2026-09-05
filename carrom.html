@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="carrom.css" />
+  </head>
+  <body>
+    <h1>Carrom Board</h1>
+    <div class="game-info">
+      <div>
+        Socre:
+        <span id="score">0</span>
+      </div>
+      <div>
+        Coins Left:
+        <span id="coinsLeft">19</span>
+      </div>
+    </div>
+    <div class="board" id="board">
+      <div class="inner-board"></div>
+      <div class="pocket p1"></div>
+      <div class="pocket p2"></div>
+      <div class="pocket p3"></div>
+      <div class="pocket p4"></div>
+
+      <div class="center"></div>
+
+      <div class="aim-line" id="aimLine"></div>
+      <!-- <h1>Queen</h1> -->
+
+      <div class="coin queen" data-x="300" data-y="300"></div>
+
+      <div class="coin white" data-x="265" data-y="300"></div>
+      <div class="coin white" data-x="335" data-y="300"></div>
+
+      <div class="coin black" data-x="282" data-y="330"></div>
+      <div class="coin black" data-x="318" data-y="330"></div>
+
+      <div class="coin white" data-x="282" data-y="270"></div>
+      <div class="coin white" data-x="318" data-y="270"></div>
+
+      <div class="coin black" data-x="300" data-y="265"></div>
+      <div class="coin black" data-x="300" data-y="335"></div>
+
+      <div class="coin white" data-x="255" data-y="335"></div>
+      <div class="coin black" data-x="345" data-y="335"></div>
+
+      <div class="coin white" data-x="255" data-y="265"></div>
+      <div class="coin black" data-x="345" data-y="265"></div>
+
+      <div class="coin white" data-x="270" data-y="350"></div>
+      <div class="coin black" data-x="330" data-y="350"></div>
+
+      <div class="coin white" data-x="270" data-y="250"></div>
+      <div class="coin black" data-x="330" data-y="250"></div>
+
+      <div class="coin white" data-x="300" data-y="370"></div>
+      <div class="coin black" data-x="300" data-y="230"></div>
+
+      <div class="striker" id="striker"></div>
+
+        <div class="message">
+            Hello Carrom
+        </div>
+        <button id="resetBtn">Reset Game</button>
+
+    </div>
+<script>
+
+const board = document.getElementById("board");
+const striker = document.getElementById("striker");
+const aimLine = document.getElementById("aimLine");
+
+const ScoreText = document.getElementById("score");
+const coinLeftText = document.getElementById("coinsLeft");
+
+let score = 0;
+
+let dragging = false;
+let shooting = false;
+
+let strikerX = 300;
+let strikerY = 540;
+
+let mouseX = 300;
+let mouseY = 540;
+
+let VelocityX = 0;
+let VelocityY = 0;
+
+let coins = [];
+
+
+// ================= COINS =================
+
+document.querySelectorAll(".coin").forEach(coin => {
+
+    let X = Number(coin.dataset.x);
+    let Y = Number(coin.dataset.y);
+
+    coin.style.left = X + "px";
+    coin.style.top = Y + "px";
+
+    coins.push({
+        element: coin,
+        x: X,
+        y: Y,
+        vx: 0,
+        vy: 0,
+        radius: 20,
+        speed: 0,
+        active: true
+    });
+
+});
+
+
+// ================= STRIKER =================
+
+function updateStriker() {
+
+    striker.style.left = strikerX + "px";
+    striker.style.top = strikerY + "px";
+
+}
+
+updateStriker();
+
+
+// ================= POSITION =================
+
+function getPosition(event) {
+
+    const rect = board.getBoundingClientRect();
+
+    let clientX;
+    let clientY;
+
+    if (event.touches && event.touches.length > 0) {
+
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+
+    } else {
+
+        clientX = event.clientX;
+        clientY = event.clientY;
+
+    }
+
+    return {
+
+        x: (clientX - rect.left) * (600 / rect.width),
+
+        y: (clientY - rect.top) * (600 / rect.height)
+
+    };
+
+}
+
+
+// ================= START DRAG =================
+
+striker.addEventListener("mousedown", startDrag);
+striker.addEventListener("touchstart", startDrag);
+
+
+function startDrag(event) {
+
+    if (shooting) return;
+
+    event.preventDefault();
+
+    dragging = true;
+
+    const pos = getPosition(event);
+
+    mouseX = pos.x;
+    mouseY = pos.y;
+
+    aimLine.style.display = "block";
+
+    drawAim();
+
+}
+
+
+// ================= DRAG =================
+
+board.addEventListener("mousemove", drag);
+board.addEventListener("touchmove", drag);
+
+
+function drag(event) {
+
+    if (!dragging) return;
+
+    event.preventDefault();
+
+    const pos = getPosition(event);
+
+    mouseX = pos.x;
+    mouseY = pos.y;
+
+    drawAim();
+
+}
+
+
+// ================= AIM LINE =================
+
+function drawAim() {
+
+    let dx = strikerX - mouseX;
+    let dy = strikerY - mouseY;
+
+    let distance = Math.sqrt(
+        dx * dx + dy * dy
+    );
+
+    if (distance > 120) {
+        distance = 120;
+    }
+
+    let angle =
+        Math.atan2(dy, dx) * 180 / Math.PI;
+
+    aimLine.style.left = strikerX + "px";
+
+    aimLine.style.top = strikerY + "px";
+
+    aimLine.style.width = distance + "px";
+
+    aimLine.style.transform =
+        `rotate(${angle}deg)`;
+
+}
+
+
+// ================= SHOOT =================
+
+document.addEventListener("mouseup", shoot);
+document.addEventListener("touchend", shoot);
+
+
+function shoot() {
+
+    if (!dragging) return;
+
+    dragging = false;
+
+    aimLine.style.display = "none";
+
+    let dx = strikerX - mouseX;
+    let dy = strikerY - mouseY;
+
+    let distance = Math.sqrt(
+        dx * dx + dy * dy
+    );
+
+    if (distance < 10) return;
+
+    if (distance > 120) {
+        distance = 120;
+    }
+
+    let power = distance / 5;
+
+    let angle =
+        Math.atan2(dy, dx);
+
+    VelocityX =
+        Math.cos(angle) * power;
+
+    VelocityY =
+        Math.sin(angle) * power;
+
+    shooting = true;
+
+    gameLoop();
+
+}
+
+
+// ================= GAME LOOP =================
+
+function gameLoop() {
+
+    if (!shooting) return;
+
+
+    // Striker movement
+
+    strikerX += VelocityX;
+    strikerY += VelocityY;
+
+
+    // Friction
+
+    VelocityX *= 0.98;
+    VelocityY *= 0.98;
+
+
+    if (
+        Math.abs(VelocityX) < 0.5 &&
+        Math.abs(VelocityY) < 0.5
+    ) {
+
+        VelocityX = 0;
+        VelocityY = 0;
+
+        shooting = false;
+
+    }
+
+
+    // Left wall
+
+    if (strikerX < 20) {
+
+        strikerX = 20;
+
+        VelocityX *= -0.7;
+
+    }
+
+
+    // Right wall
+
+    if (strikerX > 580) {
+
+        strikerX = 580;
+
+        VelocityX *= -0.7;
+
+    }
+
+
+    // Top wall
+
+    if (strikerY < 20) {
+
+        strikerY = 20;
+
+        VelocityY *= -0.7;
+
+    }
+
+
+    // Bottom wall
+
+    if (strikerY > 580) {
+
+        strikerY = 580;
+
+        VelocityY *= -0.7;
+
+    }
+
+
+    updateStriker();
+
+
+    // ================= COIN COLLISION =================
+
+    coins.forEach(coin => {
+
+        if (!coin.active) return;
+
+        let dx = strikerX - coin.x;
+        let dy = strikerY - coin.y;
+
+        let distance =
+            Math.sqrt(dx * dx + dy * dy);
+
+
+        if (distance < 40) {
+
+            coin.active = false;
+
+            coin.element.style.display = "none";
+
+            score += 10;
+
+            updateScore();
+
+        }
+
+    });
+
+
+    // ================= COIN MOVEMENT =================
+
+    coins.forEach(coin => {
+
+        if (!coin.active) return;
+
+        coin.x += coin.vx;
+        coin.y += coin.vy;
+
+        coin.vx *= 0.98;
+        coin.vy *= 0.98;
+
+        coin.element.style.left =
+            coin.x + "px";
+
+        coin.element.style.top =
+            coin.y + "px";
+
+    });
+
+
+    if (shooting) {
+
+        requestAnimationFrame(gameLoop);
+
+    }
+
+}
+
+
+// ================= SCORE =================
+
+function updateScore() {
+
+    ScoreText.textContent = score;
+
+    let remaining =
+        coins.filter(coin => coin.active).length;
+
+    coinLeftText.textContent = remaining;
+
+}
+
+
+// ================= RESET =================
+
+function resetGame() {
+
+    location.reload();
+
+}
+
+</script>
+
+</body>
+</html>
